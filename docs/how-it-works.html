@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supply Chain Network: how it works</title>
+<style>
+  :root {
+    --paper: #fbfaf7; --rail: #f2efe7; --rule: #e3ded2;
+    --text: #1d2330; --muted: #5b6170; --ink: #2f55b0; --teal: #1f8f7a;
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "Cascadia Mono", Consolas, monospace;
+  }
+  @page { size: A4; margin: 15mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: var(--paper); color: var(--text); font: 10pt/1.55 var(--sans); }
+  main { max-width: 820px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 400; margin: 0; }
+  h1 { font-size: 26pt; line-height: 1.15; }
+  h2 { font-size: 16pt; margin: 32px 0 8px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  h3 { font-size: 12pt; margin: 18px 0 4px; }
+  p { margin: 0 0 9px; }
+  .lede { font: 12pt/1.5 var(--serif); color: var(--muted); margin: 8px 0 10px; }
+  .eyebrow { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink); margin-bottom: 8px; }
+  .muted { color: var(--muted); }
+  code { font: 8.8pt var(--mono); background: var(--rail); padding: 1px 4px; }
+  pre { font: 8.6pt/1.5 var(--mono); background: var(--rail); padding: 10px 12px; margin: 8px 0 12px; white-space: pre-wrap; break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 9.2pt; }
+  tr { break-inside: avoid; }
+  th { text-align: left; font-weight: 600; color: var(--muted); font-size: 8.3pt; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--text); padding: 5px 8px 4px 0; }
+  td { border-bottom: 1px solid var(--rule); padding: 5px 8px 5px 0; vertical-align: top; }
+  td:first-child { white-space: nowrap; }
+  ul, ol { margin: 0 0 9px; padding-left: 18px; } li { margin: 3px 0; }
+  h2, h3 { break-after: avoid; }
+  @media print { main { padding: 0; max-width: none; } }
+  @media (max-width: 640px) { h1 { font-size: 21pt; } td:first-child { white-space: normal; } }
+</style>
+</head>
+<body>
+<main>
+
+<div class="eyebrow">Peer review guide</div>
+<h1>How it works</h1>
+<p class="lede">A walkthrough of the project for reviewers: what each part does, how data moves from raw distributor exports to the Tableau dashboard, how correctness is enforced, and where your eyes are most useful.</p>
+<p class="muted">Companion to the case study. Paths are relative to the project folder.</p>
+
+<h2>1. The flow in one picture</h2>
+<pre>src/generate.py ──► data/raw/*.csv (10 exports)
+                         │
+src/pipeline.py ─────────┤  runs, in order:
+                         ├─ sql/01_staging.sql   type raw files, fix dates and names
+                         ├─ sql/02_model.sql     orders, POs, daily demand and stock
+                         ├─ sql/03_features.sql  weekly snapshots, 14-day label
+                         ├─ src/model.py         stockout model, calibration, reasons
+                         ├─ sql/04_marts.sql     sc_workbench (one long table)
+                         ├─ sql/checks.sql       15 checks; any failure stops the build
+                         └─ export ──► data/model/*.csv (8 tables)
+                                              │
+tableau/build_twb.py ─────────────────────────┴─► tableau/Supply Chain Network.twbx
+                                                   ├─ workbook XML (generated)
+                                                   └─ Data/Extracts/sc_workbench.hyper</pre>
+<p>Everything downstream of <code>generate.py</code> is deterministic: same seed, same data, same model, same numbers. Two full rebuilds produce identical raw files, model tables and workbook XML; the Hyper extract inside the package is rewritten from the same table on every build.</p>
+
+<h2>2. Running it</h2>
+<pre>python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\python src\generate.py         # writes data/raw (40 s)
+.venv\Scripts\python src\pipeline.py         # builds, trains, checks, exports (60 s)
+.venv\Scripts\python tableau\build_twb.py    # writes the .twbx</pre>
+<p>Open <code>tableau\Supply Chain Network.twbx</code> in Tableau Public 2026.2 (free). The data travels inside the file, so no paths need editing. Tested on Tableau Public 2026.2.2 for Windows.</p>
+<p class="muted">Expected <code>pipeline.py</code> output: three "built" lines, "trained model: Gradient boosting, test ROC AUC 0.840 (reorder-point rule 0.699), stockouts caught at the rule's flag rate 65.6% vs 59.5%", "built 04_marts.sql", 15 lines starting with <code>pass</code>, then "exported 8 tables".</p>
+
+<h2>3. Stage by stage</h2>
+
+<h3>3.1 Simulator: <code>src/generate.py</code></h3>
+<p>Simulates the distributor day by day from 1 April 2023 to 31 March 2026. Each day runs in a fixed order: goods receipts land, retailer orders arrive, warehouses dispatch, replenishment is reviewed, and the end-of-day stock is recorded.</p>
+<table>
+  <tr><th>Mechanism</th><th>How it works</th></tr>
+  <tr><td>Reproducibility</td><td>One seeded random generator (<code>SEED = 7</code>). Every product, order, delay and defect comes from it.</td></tr>
+  <tr><td>Network</td><td>4 warehouses; 36 cities, each served by its nearest warehouse. Road distance is great-circle distance times 1.3; the standard transit is road km &divide; 450, rounded up, at least one day.</td></tr>
+  <tr><td>Suppliers</td><td>40 in ten manufacturing hubs, 6 to 10 per category. Each has an on-time probability (Beta(9, 1.6), clipped to 55 to 98%), a defect rate (median about 1.2%, up to 8%) and a short-shipping probability. Quoted lead time: 5 days plus the road distance to the farthest warehouse &divide; 600.</td></tr>
+  <tr><td>Products</td><td>200 in five categories (personal care 50, home care 40, packaged foods 50, beverages 30, snacks 30), with a unit cost, a price 18 to 35% above it, a case size and a popularity.</td></tr>
+  <tr><td>Demand</td><td>Each city orders on two fixed weekdays (Monday to Saturday). An order carries a product with probability p (popular lines almost always), in a Poisson quantity scaled by 1/p, so demand stays right on average. Volume follows city size, popularity, cheaper products selling more, 8% growth a year, beverages up 45% in April to June, and the Diwali lift (snacks 1.70, beverages 1.50, home care 1.45, personal care 1.35, packaged foods 1.20) ramping up over the 24 days before Diwali and easing over the week after.</td></tr>
+  <tr><td>Dispatch</td><td>Monday to Saturday, first come first served, up to a daily capacity in units: 1.9 times the opening average daily volume, 1.45 at Kolkata, growing 8% a year. Lines ship what is on the shelf; the rest is cut, not back-ordered.</td></tr>
+  <tr><td>Delivery</td><td>Transit days plus a Poisson delay (0.25 a day, plus the city's monsoon exposure from July to September, worse for one of the three carriers), plus a 15% chance of one more day. The promised date is order date + 1 + standard transit.</td></tr>
+  <tr><td>Replenishment</td><td>At the end of each day: reorder point = trailing 28-day average demand &times; quoted lead time + 1.0 &times; demand standard deviation &times; &radic;lead time. When stock plus open orders falls to it, order up to the reorder point plus 30 days, in whole cases. From 1 September 2025 the reorder point is multiplied by the highest Diwali lift expected over the next three weeks (the pre-build).</td></tr>
+  <tr><td>Purchase orders</td><td>Late with probability 1 &minus; on-time, by 1 + Gamma(2, 2.5) days; the monsoon adds a Poisson(1.2). Supplier S036 is 93% on time until June 2024 and 45% after. A short shipment delivers 50 to 90%; 15% of orders arrive in two deliveries 1 to 4 days apart; quality control rejects each unit with the supplier's defect rate.</td></tr>
+</table>
+<p class="muted">The exports are shaped like ERP and warehouse extracts: purchase-order dates are day first, deliveries arrive split, and every seventh supplier name is in capitals with trailing spaces.</p>
+
+<h3>3.2 Staging: <code>sql/01_staging.sql</code></h3>
+<p>Reads every CSV as text and casts explicitly. Purchase-order dates are parsed from <code>dd/mm/yyyy</code>; supplier names are trimmed and restored to title case word by word, keeping FMCG as an acronym. No business logic lives here.</p>
+
+<h3>3.3 Model: <code>sql/02_model.sql</code></h3>
+<table>
+  <tr><th>Table</th><th>Built how</th></tr>
+  <tr><td><code>dim_date</code></td><td>Every day with its week start (Monday), month and Indian financial year.</td></tr>
+  <tr><td><code>dim_product</code></td><td>Products with an ABC class by value shipped over the whole period: A makes the first 80%, B the next 15%, C the rest.</td></tr>
+  <tr><td><code>fact_order_lines</code></td><td>One row per order line: on time (delivered by the promised date), in full (shipped = ordered), OTIF (both), lead days (order to delivery) and cost of goods.</td></tr>
+  <tr><td><code>fact_purchase_orders</code></td><td>Purchase orders with their receipts summed: on time (last delivery by the promised date), in full (received &ge; ordered), actual against quoted lead time, rejected units.</td></tr>
+  <tr><td><code>fact_demand_daily</code>, <code>fact_inventory_daily</code></td><td>Every product at every warehouse every day (876,800 rows): units ordered and shipped; stock on hand, reorder point, stock value, carrying cost (value &times; 24% &divide; 365), out of stock (stock at zero) and below reorder point.</td></tr>
+</table>
+
+<h3>3.4 Features and the model: <code>sql/03_features.sql</code>, <code>src/model.py</code></h3>
+<table>
+  <tr><th>Step</th><th>How it works</th></tr>
+  <tr><td>Snapshots</td><td>Every product at every warehouse every Monday from 1 May 2023 (122,400). Label: stock reaches zero on any of the next 14 days. Snapshots without 14 days of follow-up get no label (NULL), not a zero.</td></tr>
+  <tr><td>Features</td><td>Eleven, listed in <code>model_features</code>: days of cover (stock &divide; 28-day average demand, capped at 120), cover including open purchase orders, stock &divide; reorder point, demand trend (7-day &divide; 28-day average), demand variability, the supplier's on-time rate and lead-time spread over deliveries received in the previous 180 days, days to the next Diwali (capped at 60), category, ABC class and warehouse.</td></tr>
+  <tr><td>Split</td><td>Out of time: train on snapshots to 30 September 2024 (60,000), test from 1 April 2025 (40,000). The six months between are unused, and the test year includes the pre-build policy.</td></tr>
+  <tr><td>Models</td><td>Logistic regression (scaled, one-hot) and histogram gradient boosting (depth 4, 300 iterations). Logistic is preferred unless the other beats it by at least 0.01 ROC AUC; gradient boosting won by 0.025.</td></tr>
+  <tr><td>Comparison</td><td>ROC AUC, precision-recall AUC, and stockouts caught when each method flags the same share of snapshots as the reorder-point rule (23.4%).</td></tr>
+  <tr><td>Outputs</td><td>Metrics, calibration by decile, permutation importance, then a refit on every labelled snapshot to score all of them. High = 50% or more, Watch = 20 to 50%, Low below.</td></tr>
+  <tr><td>Reasons</td><td>For each snapshot the model is re-scored with one input reset to a typical value (median cover, cover with orders, supplier on-time and lead-time spread; demand trend 1; 60 days to Diwali). Inputs that cut the risk by more than 2 points are listed, largest first, up to two.</td></tr>
+</table>
+<p class="muted">The model's input query sorts its rows, so the gradient-boosting validation split, and every result, is the same on every run.</p>
+
+<h3>3.5 Marts: <code>sql/04_marts.sql</code></h3>
+<table>
+  <tr><th>Record type</th><th>Grain and contents</th></tr>
+  <tr><td>Lane</td><td>Warehouse-to-city lane &times; category &times; month, two rows per lane: point 1 at the warehouse with the measures (lines, OTIF lines, lead days), point 2 at the city with location only.</td></tr>
+  <tr><td>Node</td><td>Warehouse &times; category &times; day: stock value, cost of goods shipped, carrying cost. Sums are rounded to four decimals, because parallel float sums otherwise differ in the last digit between builds.</td></tr>
+  <tr><td>Supplier</td><td>Supplier &times; warehouse &times; month of last receipt: orders, on time, in full, lead and quoted days, units received and rejected.</td></tr>
+  <tr><td>Snapshot</td><td>Warehouse &times; product &times; week: stock, reorder point, cover, risk score, band and reasons.</td></tr>
+</table>
+<p>For the map, every row has a <code>map_point</code> (the warehouse, or the city at a lane's far end). Node and Snapshot rows join the start point of one of their warehouse's lanes, so neither map layer meets an empty group, which Tableau would draw as a stray mark.</p>
+
+<h3>3.6 Checks: <code>sql/checks.sql</code></h3>
+<p>Each check is a query that returns the rows breaking a rule. <code>pipeline.py</code> runs them all, prints pass or fail, and exits with an error before exporting anything if any fail.</p>
+<table>
+  <tr><th>Area</th><th>Checks</th></tr>
+  <tr><td>Staging</td><td>Supplier names clean.</td></tr>
+  <tr><td>Orders</td><td>One shipment per order with dates in order; orders go to the warehouse serving their city; shipped quantities between zero and the quantity ordered.</td></tr>
+  <tr><td>Stock</td><td>Never negative; balances day to day (yesterday + accepted receipts &minus; shipments = today) for all 876,800 rows; carrying cost at 24% a year.</td></tr>
+  <tr><td>Procurement</td><td>Receipts never exceed the order and rejects never exceed receipts; every purchase order goes to the product's own supplier; ABC classes split value at 80% and 95%.</td></tr>
+  <tr><td>Model</td><td>Label matches a direct recount; no outcome without 14 days of follow-up; supplier features use only deliveries received before the snapshot; one score in [0, 1] per snapshot.</td></tr>
+  <tr><td>Tableau table</td><td>Lines, cost of goods, carrying cost, purchase orders and snapshots reconcile to the facts; every lane has both points; map anchors belong to their own warehouse; every map row has a point.</td></tr>
+</table>
+<p><code>src/mutation_test.py</code> tests the checks: on a copy of the database it breaks the data the way each check guards against, one at a time, and confirms that check fails. 15 of 15 are caught.</p>
+
+<h3>3.7 Tableau generation: <code>tableau/build_twb.py</code></h3>
+<ul>
+  <li><b>Format.</b> Tableau's current XML (version 18.1), in the form Tableau Public saves. The manifest declares <code>ParameterAction</code> and <code>ParameterActionClearSelection</code>; without them Tableau refuses the click action (error D2E8DA72).</li>
+  <li><b>Parameters.</b> Warehouse, Period, Category (string lists with All) and As-of week (a list of Monday dates). Two calculated fields combine them: <i>In scope</i> for every sheet, and <i>In scope on map</i>, which ignores Warehouse so the map never filters itself. Snapshot rows follow the week, all others the period.</li>
+  <li><b>Map.</b> A dual axis on one latitude field (<code>(lat + lat)</code>): pane 1 draws lanes as lines with point order as the path, coloured by an OTIF band computed with <code>{EXCLUDE [point_order] : ...}</code> so a line is one colour end to end; pane 2 draws a circle per map point, coloured by the share of products at high risk, cities in grey.</li>
+  <li><b>Click action.</b> An <code>edit-parameter-action</code> on the map sets Warehouse to the clicked mark's warehouse; clearing the selection sets it back to All.</li>
+  <li><b>Calculations.</b> 23 calculated fields: OTIF, turnover (365 &times; cost of goods &divide; stock-days, valid under any filter), lead time, carrying cost, risk counts and shares, supplier measures, and the lane values in the map tooltips.</li>
+  <li><b>Test switch.</b> <code>--preset Warehouse=Kolkata</code> (and Period, Category, "As-of week") builds a copy that opens with those values; <code>tableau/filter_check.py</code> prints the numbers it should show, computed independently in DuckDB.</li>
+</ul>
+
+<h3>3.8 Helper scripts</h3>
+<table>
+  <tr><th>Script</th><th>Purpose</th></tr>
+  <tr><td><code>tableau/validate_twb.py</code></td><td>Validates the workbook XML against Tableau's schema. A small set of errors is expected (Tableau's own saved files produce the same kinds); it cannot see the manifest feature switches.</td></tr>
+  <tr><td><code>tableau/open_twb.ps1</code></td><td>Opens a workbook in a new Tableau Public window, waits until it is drawn at full size, captures it, reads its log, and closes only that window, including on failure.</td></tr>
+  <tr><td><code>tableau/capture_docs.ps1</code></td><td>Case-study images: native-size captures cropped to the 1440 &times; 900 canvas (<code>crop_dashboard.ps1</code>), retaken when Tableau's editor outlines appear; scratch files removed.</td></tr>
+  <tr><td><code>tableau/make_extract.py</code>, <code>extract_tableau_xsd.py</code></td><td>Writes the Hyper extract (telemetry off); copies the schema built into the local Tableau install (never committed).</td></tr>
+  <tr><td><code>docs/charts.py</code>, <code>docs/build_pdf.ps1</code></td><td>Draws the calibration chart from the model table; prints the docs to PDF with headless Edge (<code>-Review</code> also renders every page for layout review).</td></tr>
+</table>
+
+<h2>4. Design choices worth challenging</h2>
+<table>
+  <tr><th>Choice</th><th>Why</th><th>Trade-off</th></tr>
+  <tr><td>Synthetic data</td><td>Publishable and reproducible; planted effects let the methods be checked against a known answer.</td><td>The model can only find what was planted.</td></tr>
+  <tr><td>OTIF per order line</td><td>An order of about 90 lines is complete only 16.6% of the time; per line is how most FMCG distributors report it.</td><td>Hides how often a retailer gets a whole order.</td></tr>
+  <tr><td>Short lines cut, not back-ordered</td><td>Common practice in FMCG distribution; keeps the stock balance exact.</td><td>Lost sales never return as later demand.</td></tr>
+  <tr><td>Weekly snapshots, 14-day label</td><td>Matches a weekly replenishment review.</td><td>A product that runs out on the day of a snapshot is labelled by the next one.</td></tr>
+  <tr><td>Comparing at the rule's flag rate</td><td>Same effort, so the gain is in stockouts reached.</td><td>Depends on the 23.4% the rule happens to flag.</td></tr>
+  <tr><td>One long table</td><td>Every parameter reaches every view without blending.</td><td>Sparse columns; every calculation must respect record type.</td></tr>
+  <tr><td>Map never filters itself</td><td>The network stays in view, so the next click is always there.</td><td>The map doesn't show the selected warehouse's numbers.</td></tr>
+  <tr><td>Generated workbook</td><td>Reproducible, reviewable in a diff, every number tested.</td><td>Tableau's format is undocumented; tested on one Tableau version.</td></tr>
+</table>
+
+<h2>5. What to review</h2>
+<ol>
+  <li><b>Definitions.</b> Do OTIF (per line), lead time (order to delivery), turnover and carrying cost (24% a year) match how you'd measure them?</li>
+  <li><b>Leakage.</b> Can any snapshot feature see past the snapshot day? Look at the open-order window and the 180-day supplier window.</li>
+  <li><b>Model.</b> Is the out-of-time split and the comparison with the reorder-point rule fair, given the policy change in the test year?</li>
+  <li><b>Checks.</b> Is there a failure mode the 15 checks would miss?</li>
+  <li><b>Dashboard.</b> Can an operations head find the weak warehouse, the late supplier and this week's at-risk products within a few seconds? Is anything misleading?</li>
+</ol>
+
+<h2>6. Known limits</h2>
+<ul>
+  <li>The distributor, its suppliers and retailers are synthetic; prices, margins and freight costs aren't modelled.</li>
+  <li>Inbound supplier lanes aren't drawn on the map.</li>
+  <li>Stock is end of day; intraday stockouts that recover by evening are invisible.</li>
+  <li>The workbook is tested on Tableau Public 2026.2.2 for Windows only.</li>
+</ul>
+
+</main>
+</body>
+</html>
