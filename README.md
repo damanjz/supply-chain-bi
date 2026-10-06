@@ -2,6 +2,8 @@
 
 An end-to-end supply chain case study: three years of a simulated FMCG distributor across India, modelled and tested in DuckDB, a stockout risk model measured against the reorder-point rule, and a Tableau dashboard, map first, generated entirely from code.
 
+**[Open the live dashboard on Tableau Public](https://public.tableau.com/app/profile/daman.reddy/viz/SupplyChainNetwork_17913286536000/Network)**
+
 **[Read the full case study (PDF)](docs/case-study.pdf)**, or the [web version](docs/case-study.html) for a portfolio site.
 Reviewing the code? Start with **[How it works](docs/how-it-works.pdf)**, a stage-by-stage guide with the design choices worth challenging.
 
