@@ -1,0 +1,41 @@
+supplier_id,supplier,category,hub,state,lat,lon,quoted_lead_days
+S001,Narmada Beverages,Personal care,Pithampur,Madhya Pradesh,22.611,75.676,7
+S002,Himalaya Industries,Personal care,Silvassa,Dadra and Nagar Haveli,20.274,73.008,8
+S003,Devi Home Products,Personal care,Silvassa,Dadra and Nagar Haveli,20.274,73.008,8
+S004,Vasant Consumer Products,Personal care,Howrah,West Bengal,22.596,88.264,8
+S005,Lakshmi FMCG,Personal care,Haridwar,Uttarakhand,29.945,78.164,8
+S006,Om Hygiene,Personal care,Silvassa,Dadra and Nagar Haveli,20.274,73.008,8
+S007,Devi Agro,Personal care,Pithampur,Madhya Pradesh,22.611,75.676,7
+S008,Lakshmi Foods,Personal care,Sriperumbudur,Tamil Nadu,12.968,79.947,8
+S009,Tara FMCG,Personal care,Sanand,Gujarat,22.992,72.381,8
+S010,Jyoti Home Products,Personal care,Howrah,West Bengal,22.596,88.264,8
+S011,Jyoti Foods,Home care,Chakan,Maharashtra,18.76,73.861,8
+S012,Ganga FMCG,Home care,Sanand,Gujarat,22.992,72.381,8
+S013,Bharat Beverages,Home care,Sriperumbudur,Tamil Nadu,12.968,79.947,8
+S014,Ganga Hygiene,Home care,Pithampur,Madhya Pradesh,22.611,75.676,7
+S015,Eshan Agro,Home care,Patancheru,Telangana,17.533,78.265,7
+S016,Ganga Agro,Home care,Haridwar,Uttarakhand,29.945,78.164,8
+S017,Chetak Agro,Home care,Sanand,Gujarat,22.992,72.381,8
+S018,Lakshmi Foods,Home care,Pithampur,Madhya Pradesh,22.611,75.676,7
+S019,Devi FMCG,Packaged foods,Sanand,Gujarat,22.992,72.381,8
+S020,Rajat Home Products,Packaged foods,Chakan,Maharashtra,18.76,73.861,8
+S021,Aarav Consumer Products,Packaged foods,Sanand,Gujarat,22.992,72.381,8
+S022,Om FMCG,Packaged foods,Howrah,West Bengal,22.596,88.264,8
+S023,Aarav Hygiene,Packaged foods,Chakan,Maharashtra,18.76,73.861,8
+S024,Vasant Hygiene,Packaged foods,Patancheru,Telangana,17.533,78.265,7
+S025,Chetak Consumer Products,Packaged foods,Baddi,Himachal Pradesh,30.957,76.791,8
+S026,Uday Agro,Packaged foods,Patancheru,Telangana,17.533,78.265,7
+S027,Kaveri Beverages,Packaged foods,Sanand,Gujarat,22.992,72.381,8
+S028,Himalaya FMCG,Packaged foods,Silvassa,Dadra and Nagar Haveli,20.274,73.008,8
+S029,Narmada Industries,Beverages,Silvassa,Dadra and Nagar Haveli,20.274,73.008,8
+S030,Lakshmi Consumer Products,Beverages,Patancheru,Telangana,17.533,78.265,7
+S031,Aarav Home Products,Beverages,Sriperumbudur,Tamil Nadu,12.968,79.947,8
+S032,Om Home Products,Beverages,Chakan,Maharashtra,18.76,73.861,8
+S033,Lakshmi Foods,Beverages,Howrah,West Bengal,22.596,88.264,8
+S034,Eshan Home Products,Beverages,Baddi,Himachal Pradesh,30.957,76.791,8
+S035,Chetak Home Products,Snacks,Hosur,Tamil Nadu,12.74,77.825,8
+S036,Prakash Consumer Products,Snacks,Silvassa,Dadra and Nagar Haveli,20.274,73.008,8
+S037,Devi Home Products,Snacks,Hosur,Tamil Nadu,12.74,77.825,8
+S038,Tara Hygiene,Snacks,Howrah,West Bengal,22.596,88.264,8
+S039,Devi Agro,Snacks,Patancheru,Telangana,17.533,78.265,7
+S040,Jyoti Consumer Products,Snacks,Sanand,Gujarat,22.992,72.381,8

@@ -1,0 +1,37 @@
+zone_id,city,state,lat,lon,dc_id,road_km,std_transit_days
+Z01,Hyderabad,Telangana,17.385,78.487,DC-HYD,14.0,1
+Z02,Vijayawada,Andhra Pradesh,16.506,80.648,DC-HYD,331.0,1
+Z03,Visakhapatnam,Andhra Pradesh,17.687,83.218,DC-HYD,653.0,2
+Z04,Warangal,Telangana,17.968,79.594,DC-HYD,168.0,1
+Z05,Bengaluru,Karnataka,12.972,77.595,DC-HYD,664.0,2
+Z06,Chennai,Tamil Nadu,13.083,80.271,DC-HYD,683.0,2
+Z07,Coimbatore,Tamil Nadu,11.017,76.956,DC-HYD,959.0,3
+Z08,Kochi,Kerala,9.931,76.267,DC-HYD,1136.0,3
+Z09,Madurai,Tamil Nadu,9.925,78.12,DC-HYD,1094.0,3
+Z10,Nagpur,Maharashtra,21.146,79.088,DC-HYD,536.0,2
+Z11,Mumbai,Maharashtra,19.076,72.878,DC-MUM,41.0,1
+Z12,Pune,Maharashtra,18.52,73.857,DC-MUM,156.0,1
+Z13,Nashik,Maharashtra,19.998,73.79,DC-MUM,142.0,1
+Z14,Ahmedabad,Gujarat,23.023,72.571,DC-MUM,543.0,2
+Z15,Surat,Gujarat,21.17,72.831,DC-MUM,273.0,1
+Z16,Vadodara,Gujarat,22.307,73.181,DC-MUM,435.0,1
+Z17,Goa,Goa,15.491,73.828,DC-MUM,560.0,2
+Z18,Indore,Madhya Pradesh,22.72,75.858,DC-MUM,622.0,2
+Z19,Aurangabad,Maharashtra,19.877,75.343,DC-MUM,322.0,1
+Z20,Delhi,Delhi,28.704,77.102,DC-DEL,37.0,1
+Z21,Jaipur,Rajasthan,26.912,75.787,DC-DEL,274.0,1
+Z22,Lucknow,Uttar Pradesh,26.847,80.946,DC-DEL,553.0,2
+Z23,Chandigarh,Chandigarh,30.733,76.779,DC-DEL,330.0,1
+Z24,Ludhiana,Punjab,30.901,75.857,DC-DEL,382.0,1
+Z25,Agra,Uttar Pradesh,27.177,78.008,DC-DEL,224.0,1
+Z26,Kanpur,Uttar Pradesh,26.449,80.331,DC-DEL,514.0,2
+Z27,Dehradun,Uttarakhand,30.317,78.032,DC-DEL,297.0,1
+Z28,Bhopal,Madhya Pradesh,23.26,77.413,DC-DEL,753.0,2
+Z29,Kolkata,West Bengal,22.573,88.364,DC-KOL,0.0,1
+Z30,Bhubaneswar,Odisha,20.296,85.825,DC-KOL,474.0,2
+Z31,Patna,Bihar,25.594,85.137,DC-KOL,610.0,2
+Z32,Ranchi,Jharkhand,23.344,85.31,DC-KOL,421.0,1
+Z33,Guwahati,Assam,26.144,91.736,DC-KOL,681.0,2
+Z34,Siliguri,West Bengal,26.727,88.395,DC-KOL,601.0,2
+Z35,Raipur,Chhattisgarh,21.251,81.63,DC-HYD,693.0,2
+Z36,Varanasi,Uttar Pradesh,25.318,82.974,DC-KOL,815.0,2
