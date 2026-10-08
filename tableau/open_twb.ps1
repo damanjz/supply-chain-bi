@@ -4,6 +4,8 @@
 param([Parameter(Mandatory)][string]$Twbx, [string]$Out, [int]$Settle = 12, [int]$Width = 1600)
 $exe = Get-ChildItem "C:\Program Files\Tableau" -Recurse -Filter tabpublic.exe | Sort-Object FullName -Descending | Select-Object -First 1
 $before = @(Get-Process tabpublic -ErrorAction SilentlyContinue | ForEach-Object Id)
+$tempDir = "$env:TEMP\TableauTemp"
+$tempBefore = @(Get-ChildItem $tempDir -Force -ErrorAction SilentlyContinue | ForEach-Object Name)
 $proc = Start-Process $exe.FullName -ArgumentList "`"$Twbx`"" -PassThru
 $name = [IO.Path]::GetFileNameWithoutExtension($Twbx)
 $deadline = (Get-Date).AddMinutes(3)
@@ -56,4 +58,13 @@ if ($mine) {
 
 # Close only the window this script opened
 $proc.CloseMainWindow() | Out-Null
-if (-not $proc.WaitForExit(15000)) { "window did not close by itself (left open, pid $($proc.Id))" } else { "closed pid $($proc.Id)" }
+if (-not $proc.WaitForExit(15000)) { "window did not close by itself (left open, pid $($proc.Id))"; exit 0 }
+"closed pid $($proc.Id)"
+
+# Tableau leaves temp files behind even on a clean close. Remove what appeared during this run, but only when
+# no other Tableau window was open at any point: then every new item is provably ours.
+if ($before.Count -eq 0 -and -not (Get-Process tabpublic -ErrorAction SilentlyContinue)) {
+    $new = @(Get-ChildItem $tempDir -Force -ErrorAction SilentlyContinue | Where-Object { $tempBefore -notcontains $_.Name })
+    $new | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+    "removed $($new.Count) temp item(s) from this run"
+} else { "another Tableau window was open; left TableauTemp alone" }
